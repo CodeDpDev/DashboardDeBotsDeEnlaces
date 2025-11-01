@@ -1,602 +1,592 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Dashboard de Bots (Carga Lenta Manual + Persistencia)</title>
-    <style>
-        /* Estilos CSS (Se mantienen sin cambios) */
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f4f7f6;
-            color: #333;
-            margin: 0;
-            padding: 20px;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard de Bots (Panel Flotante + Grid Fullscreen)</title>
+  <style>
+  /* 🌎 Fondo general */
+  body {
+    font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #0d1117;
+    color: #e1e4e8;
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
 
-        /* Contenedor Principal */
-        .container {
-            max-width: 1300px;
-            margin: 0 auto;
-            background: #ffffff;
-            padding: 25px;
-            border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-        }
+  /* 🧭 Botón flotante (abrir/cerrar panel) */
+  #togglePanelBtn {
+    position: fixed;
+    top: 15px;
+    left: 15px;
+    width: 50px;
+    height: 50px;
+    background: rgba(36, 41, 46, 0.95);
+    border: 1px solid #30363d;
+    border-radius: 50%;
+    color: #58a6ff;
+    font-size: 24px;
+    cursor: pointer;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.3s, transform 0.2s;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+  }
 
-        h1 {
-            color: #2c3e50;
-            border-bottom: 2px solid #e0e0e0;
-            padding-bottom: 10px;
-        }
+  #togglePanelBtn:hover {
+    background: rgba(88,166,255,0.1);
+    transform: scale(1.05);
+  }
 
-        /* Sección de Configuración */
-        .configuracion {
-            display: grid;
-            grid-template-columns: 2fr 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 25px;
-        }
+  /* ⚙️ Panel flotante ocultable */
+  .config-panel {
+    position: fixed;
+    top: 75px;
+    left: 15px;
+    width: 340px;
+    max-height: 85vh;
+    background: rgba(22, 27, 34, 0.98);
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+    padding: 18px;
+    overflow-y: auto;
+    transform: translateX(-380px);
+    transition: transform 0.4s ease;
+    z-index: 1500;
+  }
 
-        .form-group {
-            display: flex;
-            flex-direction: column;
-        }
+  .config-panel.visible {
+    transform: translateX(0);
+  }
 
-        .form-group label {
-            font-weight: 600;
-            margin-bottom: 8px;
-            color: #555;
-        }
+  .config-panel h1 {
+    font-size: 20px;
+    margin-top: 0;
+    color: #58a6ff;
+    text-align: center;
+  }
 
-        .form-group input[type="text"],
-        .form-group input[type="number"],
-        .form-group textarea {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            box-sizing: border-box;
-            font-size: 14px;
-        }
+  .form-group {
+    margin-bottom: 12px;
+    display: flex;
+    flex-direction: column;
+  }
 
-        .form-group textarea {
-            min-height: 150px;
-            font-family: monospace;
-            grid-column: 1 / -1;
-        }
+  .form-group label {
+    font-size: 13px;
+    color: #9da5b4;
+    margin-bottom: 5px;
+  }
 
-        /* Botón principal */
-        .btn-actualizar {
-            background-color: #3498db;
-            color: white;
-            padding: 12px 20px;
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
+  .form-group input, .form-group textarea {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    color: #e1e4e8;
+    padding: 8px;
+    font-size: 14px;
+    resize: none;
+  }
 
-        .btn-actualizar:hover:not(:disabled) {
-            background-color: #2980b9;
-        }
+  .form-group textarea {
+    min-height: 80px;
+  }
 
-        .btn-actualizar:disabled {
-            background-color: #bdc3c7;
-            cursor: not-allowed;
-        }
-        
-        /* Botón de Carga de Lotes */
-        #loadNextBatchButton {
-            margin-top: 20px;
-            background-color: #2ecc71;
-            transition: background-color 0.3s ease;
-        }
+  .btn-actualizar {
+    width: 100%;
+    margin-top: 8px;
+    background: #238636;
+    border: none;
+    color: white;
+    font-weight: 600;
+    padding: 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
 
-        #loadNextBatchButton:hover:not(:disabled) {
-            background-color: #27ae60;
-        }
+  .btn-actualizar:hover {
+    background: #2ea043;
+  }
 
-        /* Dashboard (Grid de Iframes) */
-        #dashboard-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
-        }
-
-        .iframe-container {
-            position: relative;
-            padding-top: 75%;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            overflow: hidden;
-            background-color: #fafafa;
-            transition: all 0.3s ease;
-        }
-
-        .iframe-container.loading::before {
-            content: 'Cargando...';
-            color: #3498db;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: absolute;
-            inset: 0;
-            background: rgba(255,255,255,0.7);
-        }
-
-        .iframe-container.loaded,
-        .iframe-container.placeholder {
-            cursor: pointer;
-        }
-        
-        .iframe-container.placeholder {
-             border: 2px dashed #bdc3c7;
-             background-color: #ecf0f1;
-        }
-        
-        .iframe-container.placeholder::before {
-            content: 'Listo para cargar';
-            color: #7f8c8d;
-        }
-
-        .iframe-container iframe {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            border: 0;
-            visibility: hidden;
-        }
-
-        .iframe-container.loaded iframe {
-            visibility: visible;
-        }
-
-        /* 🔹 BOTÓN CLARO PARA ABRIR */
-        .open-btn {
-            position: absolute;
-            bottom: 8px;
-            right: 8px;
-            background: rgba(52,152,219,0.9);
-            border: none;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            color: white;
-            font-size: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            opacity: 0;
-            transition: opacity 0.3s;
-            z-index: 10;
-        }
-        
-        .iframe-container.loaded:hover .open-btn {
-            opacity: 1;
-        }
-        
-        .iframe-container.placeholder .open-btn {
-            display: none;
-        }
+  /* 🔳 Grid de iframes */
+    #dashboard-grid {
+    flex-grow: 1;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    grid-auto-rows: minmax(280px, auto);
+    gap: 50px; /* 🔹 más espacio entre filas y columnas */
+    padding: 28px 28px 28px 28px; /* 🔹 más margen para evitar solapamiento */
+    box-sizing: border-box;
+    overflow-y: auto;
+    }
 
 
-        /* --- MODAL con Edición --- */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            justify-content: center;
-            align-items: center;
-        }
+  .iframe-container {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #161b22;
+    border: 1px solid #30363d;
+    aspect-ratio: 4 / 3;
+    min-height: 280px;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.3s ease;
+  }
 
-        .modal-overlay.visible {
-            display: flex;
-        }
+  .iframe-container iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    visibility: hidden;
+  }
 
-        .modal-content {
-            position: relative;
-            width: 95vw;
-            height: 95vh;
-            background: #fff;
-            border-radius: 8px;
-            display: flex;
-            flex-direction: column;
-        }
+  .iframe-container.loaded iframe {
+    visibility: visible;
+  }
 
-        #modal-editor {
-            padding: 10px;
-            background: #f1f1f1;
-            border-top-left-radius: 8px;
-            border-top-right-radius: 8px;
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-        
-        #modal-editor label {
-            font-weight: 600;
-            color: #555;
-            white-space: nowrap;
-        }
-        
-        #modal-editor input[type="text"] {
-            flex-grow: 1;
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 14px;
-        }
+  /* 🔍 Botón abrir modal */
+  .open-btn {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    background: rgba(88,166,255,0.9);
+    border: none;
+    border-radius: 50%;
+    width: 42px;
+    height: 42px;
+    color: white;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 10;
+  }
 
-        #modal-editor button {
-             background-color: #e67e22;
-             color: white;
-             padding: 8px 15px;
-             border: none;
-             border-radius: 4px;
-             font-weight: 600;
-             cursor: pointer;
-             transition: background-color 0.3s;
-        }
+  .iframe-container.loaded:hover .open-btn {
+    opacity: 1;
+  }
 
-        #modal-editor button:hover {
-            background-color: #d35400;
-        }
+  /* 🪟 Modal fullscreen */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    z-index: 3000;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.95);
+    justify-content: center;
+    align-items: center;
+    animation: fadeIn 0.3s ease;
+  }
 
+  .modal-overlay.visible {
+    display: flex;
+  }
 
-        .modal-close {
-            position: absolute;
-            top: -15px;
-            right: -15px;
-            width: 30px;
-            height: 30px;
-            background: #e74c3c;
-            color: white;
-            border-radius: 50%;
-            text-align: center;
-            line-height: 30px;
-            font-size: 20px;
-            font-weight: bold;
-            cursor: pointer;
-            z-index: 1001;
-        }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
 
-        #modal-iframe-holder {
-            flex-grow: 1;
-            border-bottom-left-radius: 8px;
-            border-bottom-right-radius: 8px;
-            overflow: hidden;
-        }
+  .modal-content {
+    position: relative;
+    width: 98vw;
+    height: 96vh;
+    background: #0d1117;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 0 25px rgba(0,0,0,0.8);
+    display: flex;
+    flex-direction: column;
+  }
 
-        #modal-iframe-holder iframe {
-            width: 100%;
-            height: 100%;
-            border: 0;
-            visibility: visible;
-            position: static;
-        }
-    </style>
+  #modal-editor {
+    padding: 8px 12px;
+    background: #161b22;
+    border-bottom: 1px solid #30363d;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  #modal-editor input {
+    flex-grow: 1;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #30363d;
+    background: #0d1117;
+    color: #e1e4e8;
+  }
+
+  #modal-editor button {
+    background: #e67e22;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  .modal-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 34px;
+    height: 34px;
+    background: #e74c3c;
+    color: white;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 34px;
+    font-size: 22px;
+    cursor: pointer;
+    z-index: 1001;
+  }
+
+  #modal-iframe-holder {
+    flex-grow: 1;
+    overflow: hidden;
+  }
+
+  #modal-iframe-holder iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: #000;
+  }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Dashboard de Bots (Carga Lenta Manual + Persistencia)</h1>
 
-        <div class="configuracion">
-            <div class="form-group">
-                <label for="baseUrl">Enlace Base (Ej: https://sitioweb.com/app)</label>
-                <input type="text" id="baseUrl" value="https://hyperdice.pasino.com/" />
-            </div>
+  <button id="togglePanelBtn">⚙️</button>
 
-            <div class="form-group">
-                <label for="totalToLoad">Total de Ventanas a Crear</label>
-                <input type="number" id="totalToLoad" value="36" />
-            </div>
+  <div id="configPanel" class="config-panel">
+    <h1>Dashboard de Bots</h1>
 
-            <div class="form-group">
-                <label for="batchSize">Cargar en Lotes de:</label>
-                <input type="number" id="batchSize" value="6" />
-            </div>
-
-            <div class="form-group">
-                <label for="tokens">Lista de Tokens (uno por línea)</label>
-                <textarea id="tokens" placeholder="Pega tu lista de tokens aquí, uno por línea..."></textarea>
-            </div>
-        </div>
-        
-        <button id="startButton" class="btn-actualizar">1. Crear Contenedores</button>
-        <button id="loadNextBatchButton" class="btn-actualizar" style="display: none;">2. Cargar Siguiente Lote (0/0)</button>
-        
-        <div id="status-message"></div>
-        <div id="dashboard-grid"></div>
+    <div class="form-group">
+      <label for="baseUrl">Enlace Base</label>
+      <input type="text" id="baseUrl" value="https://hyperdice.pasino.com/" />
     </div>
 
-    <div id="modal-overlay" class="modal-overlay">
-        <div class="modal-content">
-            <span id="modal-close" class="modal-close">&times;</span>
-            
-            <div id="modal-editor">
-                <label for="current-url-input">Link Completo:</label>
-                <input type="text" id="current-url-input" placeholder="URL completa del bot (para edición y recarga)" />
-                <button id="update-iframe-button">Actualizar Bot</button>
-            </div>
-            
-            <div id="modal-iframe-holder"></div>
-        </div>
+    <div class="form-group">
+      <label for="totalToLoad">Total de Ventanas</label>
+      <input type="number" id="totalToLoad" value="36" />
     </div>
 
+    <div class="form-group">
+      <label for="batchSize">Cargar en Lotes de:</label>
+      <input type="number" id="batchSize" value="6" />
+    </div>
+
+    <div class="form-group">
+      <label for="tokens">Tokens (uno por línea)</label>
+      <textarea id="tokens" placeholder="Pega tu lista de tokens aquí..."></textarea>
+    </div>
+
+    <button id="startButton" class="btn-actualizar">1. Crear Contenedores</button>
+    <button id="loadNextBatchButton" class="btn-actualizar" style="display:none;">2. Cargar Siguiente Lote (0/0)</button>
+
+    <div id="status-message" style="margin-top:10px;font-size:13px;color:#58a6ff;"></div>
+  </div>
+
+  <div id="dashboard-grid"></div>
+
+  <!-- Modal -->
+  <div id="modal-overlay" class="modal-overlay">
+    <div class="modal-content">
+      <span id="modal-close" class="modal-close">&times;</span>
+      <div id="modal-editor">
+        <label for="current-url-input">Link Completo:</label>
+        <input type="text" id="current-url-input" />
+        <button id="update-iframe-button">Actualizar Bot</button>
+      </div>
+      <div id="modal-iframe-holder"></div>
+    </div>
+  </div>
+
+  <script>
+    const togglePanelBtn = document.getElementById("togglePanelBtn");
+    const configPanel = document.getElementById("configPanel");
+    togglePanelBtn.addEventListener("click", () => {
+      configPanel.classList.toggle("visible");
+    });
+  </script>
     <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            // Referencias principales
-            const baseUrlInput = document.getElementById("baseUrl");
-            const tokensTextarea = document.getElementById("tokens");
-            const totalToLoadInput = document.getElementById("totalToLoad");
-            const batchSizeInput = document.getElementById("batchSize");
-            const startButton = document.getElementById("startButton");
-            const loadNextBatchButton = document.getElementById("loadNextBatchButton");
-            const dashboardGrid = document.getElementById("dashboard-grid");
-            const statusMessage = document.getElementById("status-message");
-            
-            // Referencias del Modal
-            const modalOverlay = document.getElementById("modal-overlay");
-            const modalIframeHolder = document.getElementById("modal-iframe-holder");
-            const modalClose = document.getElementById("modal-close");
-            const currentUrlInput = document.getElementById("current-url-input");
-            const updateIframeButton = document.getElementById("update-iframe-button");
-
-            let allPlaceholders = [];
-            let currentBatchIndex = 0;
-            let originalParent = null;
-
-            // ----------------------------------------------------
-            // 💡 FUNCIONES DE EDICIÓN Y MODAL
-            // ----------------------------------------------------
-
-            function updateIframe() {
-                const newUrl = currentUrlInput.value.trim();
-                const iframe = modalIframeHolder.querySelector("iframe");
-
-                if (!newUrl || !iframe) return;
-
-                const parentContainer = iframe.closest('.iframe-container');
+            document.addEventListener("DOMContentLoaded", () => {
+                // Referencias principales
+                const baseUrlInput = document.getElementById("baseUrl");
+                const tokensTextarea = document.getElementById("tokens");
+                const totalToLoadInput = document.getElementById("totalToLoad");
+                const batchSizeInput = document.getElementById("batchSize");
+                const startButton = document.getElementById("startButton");
+                const loadNextBatchButton = document.getElementById("loadNextBatchButton");
+                const dashboardGrid = document.getElementById("dashboard-grid");
+                const statusMessage = document.getElementById("status-message");
                 
-                if(parentContainer) {
-                    parentContainer.classList.remove('loaded');
-                    parentContainer.classList.add('loading');
-                }
-                
-                iframe.src = newUrl;
-                // Guardamos la nueva URL en data-src, ya sea manual o por actualización
-                iframe.setAttribute('data-src', newUrl); 
-                
-                iframe.onload = () => {
-                     if(parentContainer) {
-                        parentContainer.classList.remove('loading');
-                        parentContainer.classList.add('loaded');
-                     }
-                };
-            }
-            
-            function openModal(container) {
-                const iframe = container.querySelector("iframe");
-                
-                if (iframe) {
-                    originalParent = container;
+                // Referencias del Modal
+                const modalOverlay = document.getElementById("modal-overlay");
+                const modalIframeHolder = document.getElementById("modal-iframe-holder");
+                const modalClose = document.getElementById("modal-close");
+                const currentUrlInput = document.getElementById("current-url-input");
+                const updateIframeButton = document.getElementById("update-iframe-button");
+
+                let allPlaceholders = [];
+                let currentBatchIndex = 0;
+                let originalParent = null;
+
+                // ----------------------------------------------------
+                // 💡 FUNCIONES DE EDICIÓN Y MODAL
+                // ----------------------------------------------------
+
+                function updateIframe() {
+                    const newUrl = currentUrlInput.value.trim();
+                    const iframe = modalIframeHolder.querySelector("iframe");
+
+                    if (!newUrl || !iframe) return;
+
+                    const parentContainer = iframe.closest('.iframe-container');
                     
-                    // Al abrir: Intentamos cargar la URL ACTUAL del iframe en el input de edición.
-                    let currentUrl = iframe.getAttribute('data-src') || iframe.src;
-                    try {
-                        // Intentamos obtener la URL de navegación REAL dentro del iframe
-                        if (iframe.contentWindow && iframe.contentWindow.location.href) {
-                            currentUrl = iframe.contentWindow.location.href;
-                        }
-                    } catch (e) {
-                        // Fallo por Same-Origin Policy. Usamos la data-src o src
-                        console.warn("No se pudo obtener la URL actual del iframe (Same-Origin Policy). Usando URL guardada.");
+                    if(parentContainer) {
+                        parentContainer.classList.remove('loaded');
+                        parentContainer.classList.add('loading');
                     }
                     
-                    currentUrlInput.value = currentUrl;
+                    iframe.src = newUrl;
+                    // Guardamos la nueva URL en data-src, ya sea manual o por actualización
+                    iframe.setAttribute('data-src', newUrl); 
                     
-                    modalIframeHolder.appendChild(iframe);
-                    modalOverlay.classList.add("visible");
-                }
-            }
-
-            function closeModal() {
-                const iframe = modalIframeHolder.querySelector("iframe");
-                if (iframe && originalParent) {
-                    let finalUrl = currentUrlInput.value.trim(); // URL del input (por si el usuario la editó)
-                    
-                    // 1. **CLAVE DEL CAMBIO**: Intentar obtener la URL actual del iframe.
-                    try {
-                        if (iframe.contentWindow && iframe.contentWindow.location.href) {
-                            // Si se puede acceder, la URL actual del iframe (después de navegar) es la que se guarda
-                            finalUrl = iframe.contentWindow.location.href;
-                            currentUrlInput.value = finalUrl; // Opcional: actualizar el input antes de cerrar
+                    iframe.onload = () => {
+                        if(parentContainer) {
+                            parentContainer.classList.remove('loading');
+                            parentContainer.classList.add('loaded');
                         }
-                    } catch (e) {
-                         // Fallo por Same-Origin Policy. finalUrl sigue siendo la del input de edición (o el valor inicial al abrir).
-                    }
-                    
-                    // 2. Guardar la URL (navegada o editada) en el data-src para la próxima vez
-                    iframe.setAttribute('data-src', finalUrl);
-
-                    // 3. Devolver el iframe
-                    originalParent.appendChild(iframe);
-                    
-                    modalOverlay.classList.remove("visible");
-                    originalParent = null;
-                }
-            }
-            
-            // ----------------------------------------------------
-            // 🔄 LÓGICA DE CARGA LENTA MANUAL (Sin Cambios Relevantes)
-            // ----------------------------------------------------
-            
-            function createPlaceholders(tokens, baseUrl) {
-                 dashboardGrid.innerHTML = "";
-                 allPlaceholders = [];
-                 currentBatchIndex = 0;
-                 loadNextBatchButton.style.display = 'none';
-                 startButton.disabled = true;
-                 startButton.textContent = "Creando Contenedores...";
-                 statusMessage.textContent = `Preparando ${tokens.length} contenedores...`;
-
-                 for (let i = 0; i < tokens.length; i++) {
-                    const token = tokens[i];
-                    
-                    const base = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-                    const separator = base.includes('?') ? '&' : '?';
-                    const url = `${base}${separator}token=${encodeURIComponent(token)}`;
-
-                    const iframeContainer = document.createElement("div");
-                    iframeContainer.className = "iframe-container placeholder";
-                    iframeContainer.setAttribute("data-token-index", i);
-
-                    const iframe = document.createElement("iframe");
-                    iframe.setAttribute("data-src", url);
-                    iframe.setAttribute("frameborder", "0");
-                    iframe.setAttribute("loading", "lazy");
-
-                    const openBtn = document.createElement("button");
-                    openBtn.className = "open-btn";
-                    openBtn.innerHTML = "🔍";
-                    
-                    openBtn.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        if(iframeContainer.classList.contains('loaded')) {
-                             openModal(iframeContainer);
-                        }
-                    });
-
-                    iframeContainer.appendChild(openBtn);
-                    iframeContainer.appendChild(iframe);
-                    dashboardGrid.appendChild(iframeContainer);
-                    allPlaceholders.push(iframeContainer);
-                 }
-                 
-                 statusMessage.style.color = "#3498db";
-                 statusMessage.textContent = `Contenedores creados. Total: ${tokens.length}. Listo para cargar lotes.`;
-                 startButton.disabled = false;
-                 startButton.textContent = "1. Crear Contenedores";
-                 loadNextBatchButton.style.display = 'block';
-                 updateLoadBatchButton();
-            }
-
-            async function loadNextBatch() {
-                const batchSize = parseInt(batchSizeInput.value, 10) || 1;
-                const totalBots = allPlaceholders.length;
-                const startIndex = currentBatchIndex;
-                const endIndex = Math.min(startIndex + batchSize, totalBots);
-
-                if (startIndex >= totalBots) {
-                    statusMessage.style.color = "#27ae60";
-                    statusMessage.textContent = `¡Carga completa! Se cargaron ${totalBots} bots.`;
-                    loadNextBatchButton.disabled = true;
-                    loadNextBatchButton.textContent = "Carga Completa";
-                    return;
+                    };
                 }
                 
-                loadNextBatchButton.disabled = true;
-                loadNextBatchButton.textContent = `Cargando lote... (${endIndex}/${totalBots})`;
-                statusMessage.textContent = `Cargando lote (Bots ${startIndex + 1} al ${endIndex})...`;
-
-                const batch = allPlaceholders.slice(startIndex, endIndex);
-
-                const loadPromises = batch.map(container => {
-                    return new Promise(resolve => {
-                        const iframe = container.querySelector("iframe");
-                        container.classList.remove("placeholder");
-                        container.classList.add("loading");
+                function openModal(container) {
+                    const iframe = container.querySelector("iframe");
+                    
+                    if (iframe) {
+                        originalParent = container;
                         
-                        iframe.src = iframe.dataset.src;
+                        // Al abrir: Intentamos cargar la URL ACTUAL del iframe en el input de edición.
+                        let currentUrl = iframe.getAttribute('data-src') || iframe.src;
+                        try {
+                            // Intentamos obtener la URL de navegación REAL dentro del iframe
+                            if (iframe.contentWindow && iframe.contentWindow.location.href) {
+                                currentUrl = iframe.contentWindow.location.href;
+                            }
+                        } catch (e) {
+                            // Fallo por Same-Origin Policy. Usamos la data-src o src
+                            console.warn("No se pudo obtener la URL actual del iframe (Same-Origin Policy). Usando URL guardada.");
+                        }
+                        
+                        currentUrlInput.value = currentUrl;
+                        
+                        modalIframeHolder.appendChild(iframe);
+                        modalOverlay.classList.add("visible");
+                    }
+                }
 
-                        iframe.onload = () => {
-                            container.classList.remove("loading");
-                            container.classList.add("loaded");
-                            resolve();
-                        };
-                        iframe.onerror = () => {
-                            container.classList.remove("loading");
-                            container.classList.add("error");
-                            container.style.borderColor = "red";
-                            resolve();
-                        };
-                    });
-                });
+                function closeModal() {
+                    const iframe = modalIframeHolder.querySelector("iframe");
+                    if (iframe && originalParent) {
+                        let finalUrl = currentUrlInput.value.trim(); // URL del input (por si el usuario la editó)
+                        
+                        // 1. **CLAVE DEL CAMBIO**: Intentar obtener la URL actual del iframe.
+                        try {
+                            if (iframe.contentWindow && iframe.contentWindow.location.href) {
+                                // Si se puede acceder, la URL actual del iframe (después de navegar) es la que se guarda
+                                finalUrl = iframe.contentWindow.location.href;
+                                currentUrlInput.value = finalUrl; // Opcional: actualizar el input antes de cerrar
+                            }
+                        } catch (e) {
+                            // Fallo por Same-Origin Policy. finalUrl sigue siendo la del input de edición (o el valor inicial al abrir).
+                        }
+                        
+                        // 2. Guardar la URL (navegada o editada) en el data-src para la próxima vez
+                        iframe.setAttribute('data-src', finalUrl);
 
-                await Promise.all(loadPromises);
+                        // 3. Devolver el iframe
+                        originalParent.appendChild(iframe);
+                        
+                        modalOverlay.classList.remove("visible");
+                        originalParent = null;
+                    }
+                }
                 
-                currentBatchIndex = endIndex;
-                updateLoadBatchButton();
-                statusMessage.textContent = `Lote cargado. Total cargados: ${currentBatchIndex} de ${totalBots}.`;
-            }
-
-            function updateLoadBatchButton() {
-                const totalBots = allPlaceholders.length;
-                const remaining = totalBots - currentBatchIndex;
-                const batchSize = parseInt(batchSizeInput.value, 10) || 1;
+                // ----------------------------------------------------
+                // 🔄 LÓGICA DE CARGA LENTA MANUAL (Sin Cambios Relevantes)
+                // ----------------------------------------------------
                 
-                if (currentBatchIndex >= totalBots) {
+                function createPlaceholders(tokens, baseUrl) {
+                    dashboardGrid.innerHTML = "";
+                    allPlaceholders = [];
+                    currentBatchIndex = 0;
+                    loadNextBatchButton.style.display = 'none';
+                    startButton.disabled = true;
+                    startButton.textContent = "Creando Contenedores...";
+                    statusMessage.textContent = `Preparando ${tokens.length} contenedores...`;
+
+                    for (let i = 0; i < tokens.length; i++) {
+                        const token = tokens[i];
+                        
+                        const base = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+                        const separator = base.includes('?') ? '&' : '?';
+                        const url = `${base}${separator}token=${encodeURIComponent(token)}`;
+
+                        const iframeContainer = document.createElement("div");
+                        iframeContainer.className = "iframe-container placeholder";
+                        iframeContainer.setAttribute("data-token-index", i);
+
+                        const iframe = document.createElement("iframe");
+                        iframe.setAttribute("data-src", url);
+                        iframe.setAttribute("frameborder", "0");
+                        iframe.setAttribute("loading", "lazy");
+
+                        const openBtn = document.createElement("button");
+                        openBtn.className = "open-btn";
+                        openBtn.innerHTML = "🔍";
+                        
+                        openBtn.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            if(iframeContainer.classList.contains('loaded')) {
+                                openModal(iframeContainer);
+                            }
+                        });
+
+                        iframeContainer.appendChild(openBtn);
+                        iframeContainer.appendChild(iframe);
+                        dashboardGrid.appendChild(iframeContainer);
+                        allPlaceholders.push(iframeContainer);
+                    }
+                    
+                    statusMessage.style.color = "#3498db";
+                    statusMessage.textContent = `Contenedores creados. Total: ${tokens.length}. Listo para cargar lotes.`;
+                    startButton.disabled = false;
+                    startButton.textContent = "1. Crear Contenedores";
+                    loadNextBatchButton.style.display = 'block';
+                    updateLoadBatchButton();
+                }
+
+                async function loadNextBatch() {
+                    const batchSize = parseInt(batchSizeInput.value, 10) || 1;
+                    const totalBots = allPlaceholders.length;
+                    const startIndex = currentBatchIndex;
+                    const endIndex = Math.min(startIndex + batchSize, totalBots);
+
+                    if (startIndex >= totalBots) {
+                        statusMessage.style.color = "#27ae60";
+                        statusMessage.textContent = `¡Carga completa! Se cargaron ${totalBots} bots.`;
+                        loadNextBatchButton.disabled = true;
+                        loadNextBatchButton.textContent = "Carga Completa";
+                        return;
+                    }
+                    
                     loadNextBatchButton.disabled = true;
-                    loadNextBatchButton.textContent = "Carga Completa";
-                    return;
+                    loadNextBatchButton.textContent = `Cargando lote... (${endIndex}/${totalBots})`;
+                    statusMessage.textContent = `Cargando lote (Bots ${startIndex + 1} al ${endIndex})...`;
+
+                    const batch = allPlaceholders.slice(startIndex, endIndex);
+
+                    const loadPromises = batch.map(container => {
+                        return new Promise(resolve => {
+                            const iframe = container.querySelector("iframe");
+                            container.classList.remove("placeholder");
+                            container.classList.add("loading");
+                            
+                            iframe.src = iframe.dataset.src;
+
+                            iframe.onload = () => {
+                                container.classList.remove("loading");
+                                container.classList.add("loaded");
+                                resolve();
+                            };
+                            iframe.onerror = () => {
+                                container.classList.remove("loading");
+                                container.classList.add("error");
+                                container.style.borderColor = "red";
+                                resolve();
+                            };
+                        });
+                    });
+
+                    await Promise.all(loadPromises);
+                    
+                    currentBatchIndex = endIndex;
+                    updateLoadBatchButton();
+                    statusMessage.textContent = `Lote cargado. Total cargados: ${currentBatchIndex} de ${totalBots}.`;
                 }
-                
-                const nextLoadCount = Math.min(batchSize, remaining);
-                loadNextBatchButton.disabled = false;
-                loadNextBatchButton.textContent = `2. Cargar Siguiente Lote (${currentBatchIndex}/${totalBots} - Cargar ${nextLoadCount})`;
-            }
 
-            // ----------------------------------------------------
-            // 🚦 EVENT LISTENERS
-            // ----------------------------------------------------
-
-            startButton.addEventListener("click", () => {
-                const baseUrl = baseUrlInput.value.trim();
-                const totalToLoad = parseInt(totalToLoadInput.value, 10) || 0;
-
-                let tokens = tokensTextarea.value.split("\n").map(t => t.trim()).filter(t => t);
-
-                if (tokens.length === 1 && totalToLoad > 1) {
-                    tokens = Array(totalToLoad).fill(tokens[0]);
+                function updateLoadBatchButton() {
+                    const totalBots = allPlaceholders.length;
+                    const remaining = totalBots - currentBatchIndex;
+                    const batchSize = parseInt(batchSizeInput.value, 10) || 1;
+                    
+                    if (currentBatchIndex >= totalBots) {
+                        loadNextBatchButton.disabled = true;
+                        loadNextBatchButton.textContent = "Carga Completa";
+                        return;
+                    }
+                    
+                    const nextLoadCount = Math.min(batchSize, remaining);
+                    loadNextBatchButton.disabled = false;
+                    loadNextBatchButton.textContent = `2. Cargar Siguiente Lote (${currentBatchIndex}/${totalBots} - Cargar ${nextLoadCount})`;
                 }
-                
-                const tokensToLoad = tokens.slice(0, totalToLoad);
 
-                if (!tokensToLoad.length || !baseUrl || totalToLoad === 0) {
-                    alert("Por favor, revisa la configuración (URL, Tokens, Total > 0).");
-                    return;
-                }
-                
-                createPlaceholders(tokensToLoad, baseUrl);
-            });
-            
-            loadNextBatchButton.addEventListener("click", loadNextBatch);
+                // ----------------------------------------------------
+                // 🚦 EVENT LISTENERS
+                // ----------------------------------------------------
 
-            updateIframeButton.addEventListener('click', updateIframe);
-            currentUrlInput.addEventListener('keypress', (e) => {
-                 if (e.key === 'Enter') {
-                     e.preventDefault();
-                     updateIframe();
-                 }
+                startButton.addEventListener("click", () => {
+                    const baseUrl = baseUrlInput.value.trim();
+                    const totalToLoad = parseInt(totalToLoadInput.value, 10) || 0;
+
+                    let tokens = tokensTextarea.value.split("\n").map(t => t.trim()).filter(t => t);
+
+                    if (tokens.length === 1 && totalToLoad > 1) {
+                        tokens = Array(totalToLoad).fill(tokens[0]);
+                    }
+                    
+                    const tokensToLoad = tokens.slice(0, totalToLoad);
+
+                    if (!tokensToLoad.length || !baseUrl || totalToLoad === 0) {
+                        alert("Por favor, revisa la configuración (URL, Tokens, Total > 0).");
+                        return;
+                    }
+                    
+                    createPlaceholders(tokensToLoad, baseUrl);
+                });
+                
+                loadNextBatchButton.addEventListener("click", loadNextBatch);
+
+                updateIframeButton.addEventListener('click', updateIframe);
+                currentUrlInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        updateIframe();
+                    }
+                });
+                modalClose.addEventListener("click", closeModal);
+                modalOverlay.addEventListener("click", e => {
+                    if (e.target === modalOverlay) closeModal();
+                });
             });
-            modalClose.addEventListener("click", closeModal);
-            modalOverlay.addEventListener("click", e => {
-                if (e.target === modalOverlay) closeModal();
-            });
-        });
     </script>
+
+  
 </body>
 </html>
