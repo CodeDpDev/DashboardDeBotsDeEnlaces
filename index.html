@@ -127,21 +127,23 @@
 }
 
 .iframe-container {
-  position: relative;
-  background: #161b22;
-  border: 1px solid #30363d;
-  border-radius: 6px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  transition: all 0.3s ease;
+    position: relative;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.3s ease; /* Mantener transiciones suaves */
 }
 
 .iframe-container iframe {
-  width: 100%;
-  height: 100%;
-  border: none;
+    width: 100%;
+    height: 100%;
+    border: none;
+    visibility: visible; /* Asegura que no se oculten los iframes */
 }
+
 
 
 @media (max-width: 1400px) {
@@ -396,57 +398,86 @@
                 }
                 
                 function openModal(container) {
-                    const iframe = container.querySelector("iframe");
-                    
-                    if (iframe) {
-                        originalParent = container;
-                        
-                        // Al abrir: Intentamos cargar la URL ACTUAL del iframe en el input de edición.
-                        let currentUrl = iframe.getAttribute('data-src') || iframe.src;
-                        try {
-                            // Intentamos obtener la URL de navegación REAL dentro del iframe
-                            if (iframe.contentWindow && iframe.contentWindow.location.href) {
-                                currentUrl = iframe.contentWindow.location.href;
-                            }
-                        } catch (e) {
-                            // Fallo por Same-Origin Policy. Usamos la data-src o src
-                            console.warn("No se pudo obtener la URL actual del iframe (Same-Origin Policy). Usando URL guardada.");
-                        }
-                        
-                        currentUrlInput.value = currentUrl;
-                        
-                        modalIframeHolder.appendChild(iframe);
-                        modalOverlay.classList.add("visible");
-                    }
-                }
+    const iframe = container.querySelector("iframe");
 
-                function closeModal() {
-                    const iframe = modalIframeHolder.querySelector("iframe");
-                    if (iframe && originalParent) {
-                        let finalUrl = currentUrlInput.value.trim(); // URL del input (por si el usuario la editó)
-                        
-                        // 1. **CLAVE DEL CAMBIO**: Intentar obtener la URL actual del iframe.
-                        try {
-                            if (iframe.contentWindow && iframe.contentWindow.location.href) {
-                                // Si se puede acceder, la URL actual del iframe (después de navegar) es la que se guarda
-                                finalUrl = iframe.contentWindow.location.href;
-                                currentUrlInput.value = finalUrl; // Opcional: actualizar el input antes de cerrar
-                            }
-                        } catch (e) {
-                            // Fallo por Same-Origin Policy. finalUrl sigue siendo la del input de edición (o el valor inicial al abrir).
-                        }
-                        
-                        // 2. Guardar la URL (navegada o editada) en el data-src para la próxima vez
-                        iframe.setAttribute('data-src', finalUrl);
+    if (!iframe) return;
 
-                        // 3. Devolver el iframe
-                        originalParent.appendChild(iframe);
-                        
-                        modalOverlay.classList.remove("visible");
-                        originalParent = null;
-                    }
-                }
-                
+    // Guardamos el contenedor original
+    originalParent = container;
+
+    // Creamos una capa de ampliación visual
+    const overlayClone = document.createElement("div");
+    overlayClone.classList.add("modal-overlay", "visible");
+
+    // Estilos inline para evitar conflictos
+    overlayClone.style.position = "fixed";
+    overlayClone.style.top = "0";
+    overlayClone.style.left = "0";
+    overlayClone.style.width = "100vw";
+    overlayClone.style.height = "100vh";
+    overlayClone.style.zIndex = "5000";
+    overlayClone.style.background = "rgba(0,0,0,0.9)";
+    overlayClone.style.display = "flex";
+    overlayClone.style.alignItems = "center";
+    overlayClone.style.justifyContent = "center";
+
+    // Clonamos visualmente el iframe mediante CSS transform
+    iframe.style.position = "fixed";
+    iframe.style.top = "2%";
+    iframe.style.left = "1%";
+    iframe.style.width = "98%";
+    iframe.style.height = "96%";
+    iframe.style.zIndex = "5001";
+    iframe.style.border = "2px solid #58a6ff";
+    iframe.style.borderRadius = "10px";
+    iframe.style.boxShadow = "0 0 25px rgba(0,0,0,0.8)";
+    iframe.style.background = "#000";
+
+    // Botón cerrar flotante
+    const closeBtn = document.createElement("button");
+    closeBtn.textContent = "×";
+    closeBtn.style.position = "fixed";
+    closeBtn.style.top = "15px";
+    closeBtn.style.right = "25px";
+    closeBtn.style.width = "40px";
+    closeBtn.style.height = "40px";
+    closeBtn.style.fontSize = "28px";
+    closeBtn.style.background = "#e74c3c";
+    closeBtn.style.color = "white";
+    closeBtn.style.border = "none";
+    closeBtn.style.borderRadius = "50%";
+    closeBtn.style.cursor = "pointer";
+    closeBtn.style.zIndex = "6000";
+    closeBtn.style.boxShadow = "0 0 15px rgba(0,0,0,0.6)";
+
+    document.body.appendChild(overlayClone);
+    document.body.appendChild(closeBtn);
+
+    // Solo cambiamos CSS, no tocamos src (NO RECARGA)
+    overlayClone.addEventListener("click", () => closeModal(iframe, overlayClone, closeBtn));
+    closeBtn.addEventListener("click", () => closeModal(iframe, overlayClone, closeBtn));
+}
+
+function closeModal(iframe, overlayClone, closeBtn) {
+    // Restaurar estilos originales del iframe
+    iframe.style.position = "";
+    iframe.style.top = "";
+    iframe.style.left = "";
+    iframe.style.width = "";
+    iframe.style.height = "";
+    iframe.style.zIndex = "";
+    iframe.style.border = "";
+    iframe.style.borderRadius = "";
+    iframe.style.boxShadow = "";
+    iframe.style.background = "";
+
+    // Quitar capas sin destruir iframe
+    if (overlayClone && overlayClone.parentNode) overlayClone.remove();
+    if (closeBtn && closeBtn.parentNode) closeBtn.remove();
+
+    originalParent = null;
+}
+
                 // ----------------------------------------------------
                 // 🔄 LÓGICA DE CARGA LENTA MANUAL (Sin Cambios Relevantes)
                 // ----------------------------------------------------
@@ -502,53 +533,56 @@
                 }
 
                 async function loadNextBatch() {
-                    const batchSize = parseInt(batchSizeInput.value, 10) || 1;
-                    const totalBots = allPlaceholders.length;
-                    const startIndex = currentBatchIndex;
-                    const endIndex = Math.min(startIndex + batchSize, totalBots);
+    const batchSize = parseInt(batchSizeInput.value, 10) || 1;
+    const totalBots = allPlaceholders.length;
+    const startIndex = currentBatchIndex;
+    const endIndex = Math.min(startIndex + batchSize, totalBots);
 
-                    if (startIndex >= totalBots) {
-                        statusMessage.style.color = "#27ae60";
-                        statusMessage.textContent = `¡Carga completa! Se cargaron ${totalBots} bots.`;
-                        loadNextBatchButton.disabled = true;
-                        loadNextBatchButton.textContent = "Carga Completa";
-                        return;
-                    }
-                    
-                    loadNextBatchButton.disabled = true;
-                    loadNextBatchButton.textContent = `Cargando lote... (${endIndex}/${totalBots})`;
-                    statusMessage.textContent = `Cargando lote (Bots ${startIndex + 1} al ${endIndex})...`;
+    if (startIndex >= totalBots) {
+        statusMessage.style.color = "#27ae60";
+        statusMessage.textContent = `¡Carga completa! Se cargaron ${totalBots} bots.`;
+        loadNextBatchButton.disabled = true;
+        loadNextBatchButton.textContent = "Carga Completa";
+        return;
+    }
 
-                    const batch = allPlaceholders.slice(startIndex, endIndex);
+    loadNextBatchButton.disabled = true;
+    loadNextBatchButton.textContent = `Cargando lote... (${endIndex}/${totalBots})`;
+    statusMessage.textContent = `Cargando lote (Bots ${startIndex + 1} al ${endIndex})...`;
 
-                    const loadPromises = batch.map(container => {
-                        return new Promise(resolve => {
-                            const iframe = container.querySelector("iframe");
-                            container.classList.remove("placeholder");
-                            container.classList.add("loading");
-                            
-                            iframe.src = iframe.dataset.src;
+    const batch = allPlaceholders.slice(startIndex, endIndex);
 
-                            iframe.onload = () => {
-                                container.classList.remove("loading");
-                                container.classList.add("loaded");
-                                resolve();
-                            };
-                            iframe.onerror = () => {
-                                container.classList.remove("loading");
-                                container.classList.add("error");
-                                container.style.borderColor = "red";
-                                resolve();
-                            };
-                        });
-                    });
+    const loadPromises = batch.map(container => {
+        return new Promise(resolve => {
+            const iframe = container.querySelector("iframe");
+            if (iframe.src === "" || iframe.src === undefined) {
+                iframe.src = iframe.dataset.src; // Solo cargar si no tiene src
+            }
 
-                    await Promise.all(loadPromises);
-                    
-                    currentBatchIndex = endIndex;
-                    updateLoadBatchButton();
-                    statusMessage.textContent = `Lote cargado. Total cargados: ${currentBatchIndex} de ${totalBots}.`;
-                }
+            container.classList.remove("placeholder");
+            container.classList.add("loading");
+
+            iframe.onload = () => {
+                container.classList.remove("loading");
+                container.classList.add("loaded");
+                resolve();
+            };
+            iframe.onerror = () => {
+                container.classList.remove("loading");
+                container.classList.add("error");
+                container.style.borderColor = "red";
+                resolve();
+            };
+        });
+    });
+
+    await Promise.all(loadPromises);
+
+    currentBatchIndex = endIndex;
+    updateLoadBatchButton();
+    statusMessage.textContent = `Lote cargado. Total cargados: ${currentBatchIndex} de ${totalBots}.`;
+}
+
 
                 function updateLoadBatchButton() {
                     const totalBots = allPlaceholders.length;
