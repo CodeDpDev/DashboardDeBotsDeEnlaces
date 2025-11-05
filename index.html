@@ -119,10 +119,9 @@
   display: grid;
   grid-template-columns: repeat(6, 1fr); /* 🔹 6 columnas fijas */
   grid-template-rows: repeat(6, 1fr);    /* 🔹 6 filas fijas */
-  gap: 8px;                              /* 🔹 separación entre cuadros */
-  padding: 8px;
+  gap: 0px;                              /* 🔹 separación entre cuadros */
+  padding: 0px;
   height: calc(100vh - 20px);            /* 🔹 ocupa toda la altura visible */
-  box-sizing: border-box;
   overflow: hidden;                      /* ❌ elimina scroll */
 }
 
@@ -130,7 +129,6 @@
     position: relative;
     background: #161b22;
     border: 1px solid #30363d;
-    border-radius: 6px;
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -142,6 +140,12 @@
     height: 100%;
     border: none;
     visibility: visible; /* Asegura que no se oculten los iframes */
+}
+.iframe-container iframe {
+  transform: scale(0.78);        /* reduce al 80% el tamaño visible */
+  transform-origin: 0 0;        /* mantiene alineado arriba-izquierda */
+  width: 125%;                  /* compensa la reducción */
+  height: 125%;
 }
 
 
@@ -288,6 +292,8 @@
     border: none;
     background: #000;
   }
+  /* 🔍 Hace que el contenido dentro de los iframes se vea más pequeño */
+
   </style>
 </head>
 <body>
@@ -300,16 +306,6 @@
     <div class="form-group">
       <label for="baseUrl">Enlace Base</label>
       <input type="text" id="baseUrl" value="https://hyperdice.pasino.com/" />
-    </div>
-
-    <div class="form-group">
-      <label for="totalToLoad">Total de Ventanas</label>
-      <input type="number" id="totalToLoad" value="36" />
-    </div>
-
-    <div class="form-group">
-      <label for="batchSize">Cargar en Lotes de:</label>
-      <input type="number" id="batchSize" value="6" />
     </div>
 
     <div class="form-group">
@@ -350,8 +346,8 @@
                 // Referencias principales
                 const baseUrlInput = document.getElementById("baseUrl");
                 const tokensTextarea = document.getElementById("tokens");
-                const totalToLoadInput = document.getElementById("totalToLoad");
-                const batchSizeInput = document.getElementById("batchSize");
+                const totalToLoad = 36;
+                const batchSize = 6;
                 const startButton = document.getElementById("startButton");
                 const loadNextBatchButton = document.getElementById("loadNextBatchButton");
                 const dashboardGrid = document.getElementById("dashboard-grid");
@@ -533,7 +529,6 @@ function closeModal(iframe, overlayClone, closeBtn) {
                 }
 
                 async function loadNextBatch() {
-    const batchSize = parseInt(batchSizeInput.value, 10) || 1;
     const totalBots = allPlaceholders.length;
     const startIndex = currentBatchIndex;
     const endIndex = Math.min(startIndex + batchSize, totalBots);
@@ -585,9 +580,10 @@ function closeModal(iframe, overlayClone, closeBtn) {
 
 
                 function updateLoadBatchButton() {
-                    const totalBots = allPlaceholders.length;
-                    const remaining = totalBots - currentBatchIndex;
-                    const batchSize = parseInt(batchSizeInput.value, 10) || 1;
+    const totalBots = allPlaceholders.length;
+    const remaining = totalBots - currentBatchIndex;
+
+
                     
                     if (currentBatchIndex >= totalBots) {
                         loadNextBatchButton.disabled = true;
@@ -606,7 +602,7 @@ function closeModal(iframe, overlayClone, closeBtn) {
 
                 startButton.addEventListener("click", () => {
                     const baseUrl = baseUrlInput.value.trim();
-                    const totalToLoad = parseInt(totalToLoadInput.value, 10) || 0;
+                    const totalToLoadFixed = totalToLoad;
 
                     let tokens = tokensTextarea.value.split("\n").map(t => t.trim()).filter(t => t);
 
@@ -639,7 +635,5 @@ function closeModal(iframe, overlayClone, closeBtn) {
                 });
             });
     </script>
-
-  
 </body>
 </html>
